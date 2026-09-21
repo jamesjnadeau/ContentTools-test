@@ -1,0 +1,39 @@
+# The runtime config for a ContentTools shell editing THIS repository.
+#
+# Copy `app/` and `dist/` from the ContentTools build to a static host, then
+# point the shell's `config` attribute at this file. One build, many
+# deployments, one of these files each.
+backend:
+  repo: jamesjnadeau/ContentTools-test
+  branch: main
+  # `pat` is the default and needs no infrastructure: a fine-grained token
+  # scoped to this repository, with Contents and Pull requests both set to
+  # read and write. Swap to the GitHub App flow by replacing this block --
+  # see docs/auth.md in the ContentTools repo.
+  auth:
+    kind: pat
+
+media:
+  # Astro serves everything in `public/` from the site root, so a file at
+  # `public/images/x.png` is reachable at `/ContentTools-test/images/x.png`
+  # on Pages. `publicPath` carries the base, or every inserted image 404s
+  # once deployed while looking correct in `dev`.
+  folder: public/images
+  publicPath: /ContentTools-test/images
+
+collections:
+  - name: blog
+    label: Blog
+    # Astro's content collection lives here, and `src/content.config.ts`
+    # validates the frontmatter these fields write -- so a bad save fails
+    # the build rather than rendering a broken page.
+    folder: src/content/blog
+    create: true
+    delete: true
+    extension: md
+    slug: '{{slug}}'
+    fields:
+      - {name: title, widget: string, required: true}
+      - {name: date, widget: date, required: true}
+      - {name: description, widget: text}
+      - {name: draft, widget: boolean, default: false}
