@@ -6161,7 +6161,7 @@ ContentTools.ToolboxUI = class ToolboxUI extends ContentTools.WidgetUI {
     if (restore && /^\d+,\d+$/.test(restore)) {
       const position = Array.from(restore.split(",")).map((coord) => parseInt(coord));
       this._domElement.style.left = `${position[0]}px`;
-      this._domElement.style.top = `${position[1]}px`;
+      this._moveTop(`${position[1]}px`);
       this._contain();
     }
     return this._addDOMEventListeners();
@@ -6346,6 +6346,10 @@ ContentTools.ToolboxUI = class ToolboxUI extends ContentTools.WidgetUI {
     };
     return rootContext().on("window", "keydown", this._handleKeyDown);
   }
+  _moveTop(px) {
+    this._domElement.style.bottom = "auto";
+    this._domElement.style.top = px;
+  }
   _contain() {
     if (!this.isMounted()) {
       return;
@@ -6355,13 +6359,13 @@ ContentTools.ToolboxUI = class ToolboxUI extends ContentTools.WidgetUI {
       this._domElement.style.left = `${rootContext().viewportSize()[0] - rect.width}px`;
     }
     if (rect.top + rect.height > rootContext().viewportSize()[1]) {
-      this._domElement.style.top = `${rootContext().viewportSize()[1] - rect.height}px`;
+      this._moveTop(`${rootContext().viewportSize()[1] - rect.height}px`);
     }
     if (rect.left < 0) {
       this._domElement.style.left = "0px";
     }
     if (rect.top < 0) {
-      this._domElement.style.top = "0px";
+      this._moveTop("0px");
     }
     rect = this._domElement.getBoundingClientRect();
     return rootContext().storage().setItem(
@@ -6381,7 +6385,7 @@ ContentTools.ToolboxUI = class ToolboxUI extends ContentTools.WidgetUI {
   _onDrag(ev) {
     ContentSelect.Range.unselectAll();
     this._domElement.style.left = `${ev.clientX - this._draggingOffset.x}px`;
-    return this._domElement.style.top = `${ev.clientY - this._draggingOffset.y}px`;
+    return this._moveTop(`${ev.clientY - this._draggingOffset.y}px`);
   }
   _onStartDragging(ev) {
     ev.preventDefault();
