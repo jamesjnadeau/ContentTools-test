@@ -18,13 +18,18 @@ Netlify. See [Deploys](#deploys) for why there are two and what it costs.
 | `src/content.config.ts` | Astro's schema for that frontmatter |
 | `src/pages/` | the index and the post route |
 | `public/images/` | media, which the CMS commits alongside the entry that references it |
-| `public/cms-config.yml` | the runtime config the CMS is pointed at, in `public/` so it is actually served |
-| `public/admin/` | the vendored CMS itself — **generated**, refreshed by `scripts/sync-cms.sh` |
+| `public/cms-config.yml` | the runtime config BOTH halves of the CMS are pointed at, in `public/` so it is actually served |
+| `public/cms/` | the vendored CMS artifacts — **generated**, refreshed by `scripts/sync-cms.sh` |
+| `public/admin/index.html` | the admin page — **generated** by the same script |
+| `src/layouts/BaseLayout.astro` | where `cms/edit.js` goes on every page of the site |
 | `netlify.toml` | the Netlify half of the deploy, and the path rewrite it needs |
 
 ## Editing it
 
-The CMS is deployed with the site, at **`/admin/`**:
+The CMS is deployed with the site, in two halves, and the split is the point.
+
+**`/admin/`** manages drafts and pull requests — the collection list, the
+entry list, what is in review, create and delete:
 
 <https://genuine-cocada-82e6e2.netlify.app/admin/>
 
@@ -34,9 +39,35 @@ write*. Anything less is refused at the gate rather than at the first save.
 The token is held in `sessionStorage` and forgotten when the tab closes; it
 is never sent anywhere but GitHub.
 
+**The words are written on the post itself.** Press **Edit** on an entry and
+it opens the published page — this site's real template, this site's real
+stylesheet — with the editor already coming up over the post body. A bar
+across the bottom carries the frontmatter fields and **Submit for review**.
+That is the whole argument for it: an editor that shows you the page you are
+editing is worth more than one that shows you a text box, and it is a preview
+that costs nothing because it is not a preview.
+
+`src/layouts/BaseLayout.astro` carries the one tag that does it, on every
+page:
+
+```html
+<script type="module" src="/ContentTools-test/cms/edit.js"></script>
+```
+
+A reader pays two small requests for that and nothing else — about 1.4 kB
+gzipped between them. The editor, the markdown parser and the GitHub client
+are all behind a dynamic import and arrive only for somebody who is actually
+editing.
+
+An entry with an open pull request opens on that request's **Netlify deploy
+preview** rather than on the live site, because the live site is built from
+`main` and does not have the draft. `site.preview` in `public/cms-config.yml`
+is what makes that work, and `netlify.toml`'s prefix rewrite applies to
+previews too, which is what makes the prefixed path resolve there.
+
 ### The vendored CMS
 
-`public/admin/` is **generated** — the built shell, committed. It is not
+`public/cms/` is **generated** — the built artifacts, committed. It is not
 installed as a dependency because the package is not on npm yet and its
 `dist/` is gitignored, so there is nothing to depend on. Refresh it from a
 ContentTools checkout:
@@ -50,6 +81,13 @@ exists rather than a line of instructions: the chunk filenames are
 content-hashed, so copying over the top leaves the old chunks behind while
 `shell.js` imports the new names — a page that 404s at runtime on an import
 of a file nobody touched.
+
+One folder for both entry points, and it is called `cms` rather than `admin`
+for two reasons. `shell.js` and `edit.js` share most of their graph, so
+vendoring them apart would ship two copies of ~100 kB and warm two caches for
+one page. And `edit.js` is downloaded by every *reader* of the site: a reader
+fetching something out of `/admin/` is a reasonable thing for somebody to
+panic about.
 
 When the package reaches npm, this folder and the script are what get
 deleted.

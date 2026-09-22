@@ -1,34 +1,38 @@
 <!DOCTYPE html>
 <!--
-  The ContentTools CMS, vendored.
+  The ContentTools admin screens, vendored.
 
   This is @jamesjnadeau/content-tools @@VERSION@@ (ContentTools @@SHA@@), copied out of
   that repository's `app/` and `dist/` by `scripts/sync-cms.sh`. It is
   committed rather than installed because the package is not on npm yet and
   its `dist/` is gitignored, so there is nothing to depend on. Refresh it
-  with the script; do not hand-edit anything in this folder.
+  with the script; do not hand-edit anything it generates.
 
-  The chunk filenames are CONTENT-HASHED, which is why the script deletes
-  this folder before copying. Copy over the top instead and the old chunks
-  stay behind while `shell.js` imports the new names -- a page that 404s on
-  an import of a file nobody touched.
+  The artifacts live one folder over, in `/cms/`, because `shell.js` and the
+  `edit.js` on the site's own pages share most of their chunks -- see the
+  script. The chunk filenames are CONTENT-HASHED, which is why it deletes
+  that folder before copying: copy over the top instead and the old chunks
+  stay behind while `shell.js` imports the new names, a page that 404s on an
+  import of a file nobody touched.
 
-  `../cms-config.yml` is relative on purpose. This page is reachable at
-  both `/admin/` and `/ContentTools-test/admin/` on Netlify, and only the
-  second on Pages; a relative config resolves correctly at all three, and an
-  absolute one would be wrong at two of them.
+  Both hrefs are RELATIVE on purpose. This page is reachable at `/admin/`
+  and at `/ContentTools-test/admin/` on Netlify, and only the second on
+  Pages; a relative path resolves correctly at all three, and an absolute
+  one would be wrong at two of them.
 
-  The content stylesheet link is load-bearing, not decoration. In Mode A the
-  editable content stays in the document, so its rules -- drop indicators,
-  hover outlines, drag cursors -- have to reach the document too. Without it
-  everything still LOOKS fine and none of the editing affordances appear.
+  There is NO content stylesheet link here, and there was one until the
+  admin screens stopped holding an editor. Its rules -- drop indicators,
+  hover outlines, drag cursors -- exist for editable content sitting in the
+  document, and there is none on this page any more: this is where drafts
+  and pull requests are managed, and the words of an entry are written on
+  the site's own page. The script that DOES put an editor over content
+  injects the sheet itself.
 -->
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Content</title>
-<link rel="stylesheet" href="./content-tools-content.css">
 <style>
     /* The page's only job is to give the shell the viewport. Everything
        else it draws is inside its own shadow root. */
@@ -36,7 +40,7 @@
     body { margin: 0; }
     content-tools-cms { height: 100%; }
 </style>
-<script type="module" src="./shell.js"></script>
+<script type="module" src="../cms/shell.js"></script>
 </head>
 <body>
 <content-tools-cms config="../cms-config.yml"></content-tools-cms>

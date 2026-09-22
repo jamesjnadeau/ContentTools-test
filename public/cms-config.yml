@@ -1,8 +1,14 @@
-# The runtime config for a ContentTools shell editing THIS repository.
+# The runtime config for the ContentTools CMS editing THIS repository.
 #
-# Copy `app/` and `dist/` from the ContentTools build to a static host, then
-# point the shell's `config` attribute at this file. One build, many
-# deployments, one of these files each.
+# ONE file, read by BOTH surfaces: the admin screens at `/admin/` fetch it
+# through the `config` attribute on their `<content-tools-cms>` tag, and the
+# `edit.js` on every page of the site fetches it through the
+# `<meta name="cms:config">` in `src/layouts/BaseLayout.astro`. They agree
+# about which URL is which post because they are reading the same `page`
+# template, which is the whole reason it is one file.
+#
+# It lives under `public/` because Astro copies only that directory into the
+# build; at the repository root it is a 404 on the deployed site.
 backend:
   repo: jamesjnadeau/ContentTools-test
   branch: main
@@ -12,6 +18,34 @@ backend:
   # see docs/auth.md in the ContentTools repo.
   auth:
     kind: pat
+
+# Where this deployment's content is PUBLISHED, which is where it is
+# EDITED. `/admin/` manages drafts and pull requests; the words of an entry
+# are changed on the site's own page, with this site's real template and
+# real stylesheet around them. Leave `site` out and the admin screens still
+# work -- they simply offer no link to a page, and say so.
+site:
+  # The prefix the built site is served under. Astro bakes the same value
+  # into every generated URL (`astro.config.mjs`), because a GitHub Pages
+  # PROJECT site is served under the repository name.
+  #
+  # Held apart from each collection's `page` rather than written into it,
+  # and this site is the reason that distinction exists: the same build
+  # answers at `/ContentTools-test/` on Pages AND at `/` on Netlify. The
+  # prefix is STRIPPED when a page asks which entry it is showing, so both
+  # spellings map to the same post; it is ADDED when the admin screens
+  # build a link, so the link works on either host.
+  base: /ContentTools-test
+  # A pull request's deploy preview, which is what makes an unpublished
+  # entry editable at all. A new post and a post under review are both
+  # absent from the live site, so the live URL cannot show them -- the
+  # preview renders the branch the editor is committing to, so the page an
+  # author edits is the page their change produces.
+  #
+  # Netlify builds one of these per pull request from `netlify.toml`, and
+  # the prefix rewrite in that file applies to previews too, which is what
+  # makes `<preview>/ContentTools-test/blog/...` resolve.
+  preview: https://deploy-preview-{{pr}}--genuine-cocada-82e6e2.netlify.app
 
 media:
   # Astro serves everything in `public/` from the site root, so a file at
@@ -37,6 +71,15 @@ collections:
     delete: true
     extension: md
     slug: '{{slug}}'
+    # The two keys in-page editing needs. `page` maps a slug to the URL
+    # its post is published at, and back again -- `src/pages/blog/
+    # [...slug].astro` is what makes it true, so the two have to be
+    # changed together. `body` names the element on that page holding the
+    # rendered markdown, and NOTHING ELSE: the editor replaces that
+    # element's children, so a selector reaching the page wrapper would
+    # replace this site's layout with a post.
+    page: /blog/{{slug}}/
+    body: article.post-body
     fields:
       - {name: title, widget: string, required: true}
       - {name: date, widget: date, required: true}

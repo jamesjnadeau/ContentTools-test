@@ -6,6 +6,11 @@ interface Props {
 
 const {title, description} = Astro.props;
 const home = import.meta.env.BASE_URL;
+
+// Rooted, no trailing slash, so `${base}/cms/edit.js` is right for a site
+// at the root as well as for this one. `BASE_URL` carries the trailing
+// slash and `index.astro` trims it the same way.
+const base = import.meta.env.BASE_URL.replace(/\/$/, '');
 ---
 <!doctype html>
 <html lang="en">
@@ -14,6 +19,26 @@ const home = import.meta.env.BASE_URL;
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{title}</title>
     {description && <meta name="description" content={description} />}
+
+    {/*
+      The CMS, on the site's own pages.
+
+      ONE tag, on EVERY page, and that is the shape of the thing rather
+      than laziness: `edit.js` is the decision and nothing else -- about
+      1.4 kB -- and everything behind the decision is a dynamic import. A
+      reader downloads this file, asks sessionStorage two questions, and
+      downloads nothing more. Restricting it to `blog/[...slug].astro`
+      would save them nothing and would break the one behaviour that makes
+      it feel like part of the site: a signed-in author keeps the editor as
+      they move from page to page.
+
+      `cms:config` is not optional here. The script defaults to
+      `/cms-config.yml`, which is correct for a site at the root and a 404
+      on this one -- Pages serves us under the repository name, so the file
+      is at `/ContentTools-test/cms-config.yml`.
+    */}
+    <meta name="cms:config" content={`${base}/cms-config.yml`} />
+    <script type="module" src={`${base}/cms/edit.js`}></script>
     <style is:global>
         :root { color-scheme: light dark; --ink: #1c1c1c; --paper: #fbfaf7; --muted: #6b6b6b; --rule: #e3e0d8; }
         @media (prefers-color-scheme: dark) {

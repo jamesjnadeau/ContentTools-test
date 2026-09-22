@@ -14755,6 +14755,11 @@ function parseDocument(source, options = {}) {
 }
 function parse(src, reviver, options) {
   let _reviver = void 0;
+  if (typeof reviver === "function") {
+    _reviver = reviver;
+  } else if (options === void 0 && reviver && typeof reviver === "object") {
+    options = reviver;
+  }
   const doc = parseDocument(src, options);
   if (!doc)
     return null;
@@ -15304,6 +15309,30 @@ class MarkdownDocument {
     }
     return front + this.gapAfterFrontmatter(body) + body;
   }
+  /**
+   * The new file contents with this frontmatter and the body exactly
+   * as it is, byte for byte.
+   *
+   * `update` reaches the same answer for a body nobody touched -- every
+   * block compares equal to its original and every one is spliced --
+   * but it reaches it by taking the body apart and putting it back
+   * again, and that is a round trip the management screens have no
+   * reason to take: /admin edits frontmatter and nothing else, so the
+   * body it writes has never been rendered, never been in an editor,
+   * and has nobody's edit in it.
+   *
+   * The difference is not a saving, it is what the guarantee rests on.
+   * Going through `update` would make "the body is untouched" a
+   * property of the walker's fidelity over every construct in the file,
+   * so an inline type nobody has thought about would rewrite a block on
+   * a save that changed a date. Here it is a property of the code path:
+   * the body is never read.
+   */
+  updateFrontmatter(frontmatter2) {
+    const front = this.parsed.frontmatter;
+    const rest = front ? this.parsed.source.slice(front.end) : this.gapAfterFrontmatter(this.parsed.source) + this.parsed.source;
+    return blockFor(frontmatter2) + rest;
+  }
   // --- internals -------------------------------------------------------
   /**
    * The bytes between the frontmatter and the body.
@@ -15399,9 +15428,12 @@ class MarkdownDocument {
     if (options.frontmatter === null || options.frontmatter === void 0) {
       return null;
     }
-    return `---
-${stringify(options.frontmatter)}---`;
+    return blockFor(options.frontmatter);
   }
+}
+function blockFor(data) {
+  return `---
+${stringify(data)}---`;
 }
 export {
   LANGUAGE_ATTRIBUTE as L,

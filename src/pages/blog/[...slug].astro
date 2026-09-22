@@ -15,5 +15,21 @@ const fmt = new Intl.DateTimeFormat('en', {dateStyle: 'long', timeZone: 'UTC'});
 <BaseLayout title={post.data.title} description={post.data.description}>
     <h1>{post.data.title}</h1>
     <p class="meta">{fmt.format(post.data.date)}</p>
-    <Content />
+    {/*
+      `cms-config.yml` names this element as the blog collection's `body`,
+      and it wraps the rendered markdown and NOTHING ELSE. The in-page
+      editor replaces this element's children, so a selector that reached
+      `<main>` or the layout's `.wrap` would replace the site's template
+      with the post -- the heading and the date above would vanish the
+      moment somebody pressed Edit.
+
+      A site whose URLs no `page` template can describe would say which
+      entry this is in the markup instead:
+          <meta name="cms:entry" content={`blog/${post.id}`} />
+          <article data-cms-body>
+      Both of those beat the config wherever they appear. This site's URLs
+      are describable, so it uses the config and leaves one place to be
+      wrong instead of two.
+    */}
+    <article class="post-body"><Content /></article>
 </BaseLayout>
