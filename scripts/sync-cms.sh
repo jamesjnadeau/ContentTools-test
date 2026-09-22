@@ -35,6 +35,14 @@ cp "$CT/dist/shell.js" "$DEST/"
 cp "$CT/dist/chunks/"*.js "$DEST/chunks/"
 cp "$CT/dist/content-tools-content.css" "$DEST/"
 
+# The content stylesheet references six assets under `./images/` -- the icon
+# font and the drop-indicator/video SVGs -- so copying the sheet without them
+# ships six 404s. The icon font is the one that fails INVISIBLY: the page
+# looks right, but the face registers in `error` state, the element sees a
+# face named `icon` already there and skips its own data-URI fallback, and
+# every tool in the toolbox renders as a tofu box.
+cp -R "$CT/dist/images" "$DEST/"
+
 # The page itself is generated, so the version it records cannot drift from
 # the bytes beside it.
 sed -e "s/@@VERSION@@/$VERSION/" -e "s/@@SHA@@/$SHA/" \
