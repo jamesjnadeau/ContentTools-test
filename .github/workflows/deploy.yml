@@ -1,44 +1,39 @@
 name: Deploy
 
-# Pull requests build and get their own Netlify preview, and that is the
-# point rather than a convenience: every change to this site arrives as a
-# pull request opened by the CMS, and a reviewer looking at raw markdown
-# cannot see what the page will actually look like.
+# Netlify is NOT deployed from here. This repository is linked to Netlify
+# directly, so Netlify builds it itself -- from `netlify.toml`, on every
+# push and as a Deploy Preview on every pull request. Adding a second
+# Netlify deploy here would publish the same site twice on every push,
+# racing, and put two previews on every pull request.
+#
+# Pull requests still build, and that is the part worth keeping: the CMS
+# writes frontmatter, `src/content.config.ts` validates it, and a bad save
+# should fail the BUILD rather than render a broken page. Catching it on
+# the pull request is the whole point of validating it at all.
 on:
   push:
     branches: [main]
   pull_request:
   workflow_dispatch:
 
-# Read-only by default; the two jobs that need more ask for it themselves.
+# Read-only by default; the one job that needs more asks for it itself.
 # Nothing here can write to the repository's contents, so a merged pull
 # request is still the only way content changes.
 permissions:
   contents: read
 
 concurrency:
-  # Per ref, so a preview never queues behind production or the reverse.
-  # Superseded PREVIEWS are cancelled -- the CMS can push several saves to
-  # one branch in a minute and only the last one matters -- but a
-  # production deploy is never cancelled, because a half-finished one
-  # leaves the site down.
+  # Per ref, so a pull request's build check never queues behind a
+  # production deploy or the reverse. A superseded CHECK is cancelled --
+  # the CMS can push several saves to one branch in a minute and only the
+  # last matters -- but a production deploy is never cancelled, because a
+  # half-finished one leaves the site down.
   group: deploy-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      # Only to leave the preview URL on the pull request.
-      pull-requests: write
-    env:
-      # Lifted to the job so the step below can TEST for them. A secret
-      # cannot be read in an `if:`, but a job-level env var can -- and that
-      # is what keeps a repository with no Netlify set up yet from failing
-      # its GitHub Pages deploy over a Netlify step nobody configured.
-      NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
-      NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
     steps:
       - uses: actions/checkout@v4
 
@@ -50,65 +45,14 @@ jobs:
       - run: npm ci
       - run: npm run build
 
-      # ONE build, deployed twice. Pages and Netlify serve byte-identical
-      # output, so any difference between the two sites is a difference in
-      # how they are served and never in what was built.
       - name: Upload the Pages artifact
         if: github.event_name != 'pull_request'
         uses: actions/upload-pages-artifact@v3
         with:
           path: dist/
 
-      - name: Deploy to Netlify
-        id: netlify
-        if: env.NETLIFY_AUTH_TOKEN != '' && env.NETLIFY_SITE_ID != ''
-        run: |
-          set -euo pipefail
-          # `--no-build` because the build already happened, above. Without
-          # it the CLI runs netlify.toml's build command a second time.
-          if [ "${{ github.event_name }}" = 'pull_request' ]; then
-            npx --yes netlify-cli@27 deploy --no-build --dir=dist --json \
-              --alias "pr-${{ github.event.pull_request.number }}" \
-              --message "PR #${{ github.event.pull_request.number }}" > raw.txt
-            KEY=.deploy_url
-          else
-            npx --yes netlify-cli@27 deploy --no-build --dir=dist --json --prod \
-              --message "main ${{ github.sha }}" > raw.txt
-            KEY=.url
-          fi
-          # The CLI can print a banner ahead of the JSON, so read from the
-          # first brace rather than handing the whole of stdout to jq.
-          sed -n '/^{/,$p' raw.txt > deploy.json
-          echo "url=$(jq -r "$KEY" deploy.json)" >> "$GITHUB_OUTPUT"
-
-      - name: Say where it went
-        if: steps.netlify.outputs.url != ''
-        run: |
-          echo "Netlify: ${{ steps.netlify.outputs.url }}" >> "$GITHUB_STEP_SUMMARY"
-
-      - name: Leave the preview URL on the pull request
-        if: github.event_name == 'pull_request' && steps.netlify.outputs.url != ''
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          URL: ${{ steps.netlify.outputs.url }}
-          NUMBER: ${{ github.event.pull_request.number }}
-        run: |
-          set -euo pipefail
-          BODY="Netlify preview of this change: $URL"
-          # Edited in place rather than appended to, so a branch the CMS
-          # saves to five times carries one comment and not five.
-          gh pr comment "$NUMBER" --edit-last --body "$BODY" \
-            || gh pr comment "$NUMBER" --body "$BODY"
-
-      - name: Note that Netlify is not configured
-        if: env.NETLIFY_AUTH_TOKEN == '' || env.NETLIFY_SITE_ID == ''
-        run: |
-          echo 'Netlify was skipped: set the `NETLIFY_AUTH_TOKEN` and' \
-               '`NETLIFY_SITE_ID` repository secrets to enable it.' \
-               'GitHub Pages is unaffected.' >> "$GITHUB_STEP_SUMMARY"
-
   pages:
-    # A preview must never touch production.
+    # A pull request builds to be checked, never to be published.
     if: github.event_name != 'pull_request'
     needs: build
     runs-on: ubuntu-latest

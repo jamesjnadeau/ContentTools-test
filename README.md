@@ -43,8 +43,16 @@ like.
 
 ## Deploys
 
-One build, two hosts, byte-identical output — so a difference between the two
-sites is a difference in how they are served, never in what was built.
+Two hosts, two build paths, one source of truth for each. GitHub Actions
+builds and deploys **Pages**. Netlify is linked to this repository directly
+and builds **itself**, from `netlify.toml`, on every push and as a Deploy
+Preview on every pull request.
+
+Deliberately not both: a second Netlify deploy from Actions would publish the
+same site twice on every push, racing, and put two previews on every pull
+request. Actions still builds pull requests, as a check — the CMS writes
+frontmatter, `src/content.config.ts` validates it, and a bad save should fail
+the build rather than render a broken page.
 
 The awkward part is `base`. Astro bakes it into every generated URL at build
 time, and a GitHub Pages **project** site is served under the repository name,
@@ -65,18 +73,19 @@ rather than a redirect so nothing bounces and the page's own links resolve.
 `https://<site>.netlify.app/` works too, because the files really are at the
 root.
 
-### Turning Netlify on
+### If you ever want Actions to own the Netlify deploy instead
 
-The workflow skips Netlify entirely until two repository secrets exist, so
-Pages keeps deploying on its own until you are ready:
+Worth it only for one property: a single build published to both hosts, so
+the two sites cannot drift. With the split above they build separately, and
+the guards against drift are the committed lockfile and `NODE_VERSION` pinned
+to the same 22 on both sides.
 
-| secret | where it comes from |
-|---|---|
-| `NETLIFY_AUTH_TOKEN` | Netlify → User settings → Applications → **New access token** |
-| `NETLIFY_SITE_ID` | the site's Site settings → **Site ID** (create an empty site first; no repository needs connecting) |
-
-Add both under Settings → Secrets and variables → Actions. Until then each run
-says so in its summary and nothing fails.
+To switch: turn Netlify's own builds off (Site configuration → Build & deploy
+→ **Stop builds**), add `NETLIFY_AUTH_TOKEN` and `NETLIFY_SITE_ID` as Actions
+secrets, and deploy `dist/` from the workflow with
+`netlify deploy --no-build --dir=dist`. `--no-build` is required — the CLI
+runs `netlify.toml`'s build command otherwise, and would build the site a
+second time.
 
 ## Running it locally
 

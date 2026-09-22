@@ -1,4 +1,10 @@
-# Netlify serves this site IN ADDITION to GitHub Pages, from the same build.
+# Netlify serves this site IN ADDITION to GitHub Pages.
+#
+# This repository is linked to Netlify directly, so THIS FILE is what
+# Netlify builds from -- on every push, and as a Deploy Preview on every
+# pull request. GitHub Actions deploys Pages and deliberately does not
+# touch Netlify; a second deploy path would publish the same site twice on
+# every push and put two previews on every pull request.
 #
 # The awkward part, and the reason this file exists: Astro bakes `base` into
 # every generated URL at build time. `astro.config.mjs` sets it to
@@ -24,9 +30,9 @@
   publish = "dist"
 
 [build.environment]
-  # Astro 5 needs a current Node. CI passes `--no-build`, so this matters
-  # only if the build is ever run on Netlify's side -- which it would be if
-  # this repository were later connected to Netlify's own git integration.
+  # Astro 5 needs a current Node, and Netlify's default is not guaranteed
+  # to be one. Pinned to the same version the Actions build uses, so the
+  # two hosts are building the same way as well as building the same thing.
   NODE_VERSION = "22"
 
 # The prefix rule, and the whole point of the file.
