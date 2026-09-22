@@ -1,0 +1,52 @@
+# Netlify serves this site IN ADDITION to GitHub Pages, from the same build.
+#
+# The awkward part, and the reason this file exists: Astro bakes `base` into
+# every generated URL at build time. `astro.config.mjs` sets it to
+# `/ContentTools-test`, because a GitHub Pages PROJECT site is served under
+# the repository name -- so `dist/index.html` links to
+# `/ContentTools-test/blog/...` even though the file itself sits at
+# `dist/blog/...`. Serve that same output at a Netlify root and the home
+# page loads while every link on it 404s.
+#
+# Building twice, once per base, is the obvious alternative and it is worse
+# than it looks. `cms-config.yml` sets `media.publicPath` to
+# `/ContentTools-test/images`, and that prefix is written INTO THE MARKDOWN
+# when the CMS inserts an image -- into committed content, on a branch, in a
+# pull request somebody has already reviewed. Two bases means every inserted
+# image is broken on one of the two sites, permanently, and no amount of
+# deploy configuration fixes a path that is already in the file.
+#
+# So: one build, one set of paths, and Netlify is taught to answer to the
+# same prefix.
+
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+[build.environment]
+  # Astro 5 needs a current Node. CI passes `--no-build`, so this matters
+  # only if the build is ever run on Netlify's side -- which it would be if
+  # this repository were later connected to Netlify's own git integration.
+  NODE_VERSION = "22"
+
+# The prefix rule, and the whole point of the file.
+#
+# A rewrite (200) rather than a redirect (301): the address bar keeps the
+# prefix, which is what the page's own links already use, so nothing
+# bounces. Netlify matches real files first and only falls through to this
+# when there is nothing there -- which is exactly the prefixed paths and
+# never the bare ones, so `https://<site>.netlify.app/` keeps working too.
+# The bare prefix, with no trailing slash, needs its own rule: the site's
+# own header links to `/ContentTools-test` exactly, and a splat pattern is
+# not guaranteed to match the path it is rooted at. Found by walking every
+# absolute URL in the build and checking what the rewrite lands on -- the
+# home page's masthead was the one that missed.
+[[redirects]]
+  from = "/ContentTools-test"
+  to = "/"
+  status = 200
+
+[[redirects]]
+  from = "/ContentTools-test/*"
+  to = "/:splat"
+  status = 200

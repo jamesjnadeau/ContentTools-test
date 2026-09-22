@@ -18,6 +18,11 @@ media:
   # `public/images/x.png` is reachable at `/ContentTools-test/images/x.png`
   # on Pages. `publicPath` carries the base, or every inserted image 404s
   # once deployed while looking correct in `dev`.
+  #
+  # This prefix ends up written INTO THE MARKDOWN, which is why the site is
+  # served under the same prefix on Netlify as on Pages -- see the rewrite
+  # in `netlify.toml`. A path already committed to a file cannot be fixed
+  # by a deploy setting, so the two hosts have to agree.
   folder: public/images
   publicPath: /ContentTools-test/images
 
