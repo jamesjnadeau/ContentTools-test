@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<!--
+  The ContentTools CMS, vendored.
+
+  This is @jamesjnadeau/content-tools 2.0.0-rc.1 (ContentTools 1d5972a), copied out of
+  that repository's `app/` and `dist/` by `scripts/sync-cms.sh`. It is
+  committed rather than installed because the package is not on npm yet and
+  its `dist/` is gitignored, so there is nothing to depend on. Refresh it
+  with the script; do not hand-edit anything in this folder.
+
+  The chunk filenames are CONTENT-HASHED, which is why the script deletes
+  this folder before copying. Copy over the top instead and the old chunks
+  stay behind while `shell.js` imports the new names -- a page that 404s on
+  an import of a file nobody touched.
+
+  `../cms-config.yml` is relative on purpose. This page is reachable at
+  both `/admin/` and `/ContentTools-test/admin/` on Netlify, and only the
+  second on Pages; a relative config resolves correctly at all three, and an
+  absolute one would be wrong at two of them.
+
+  The content stylesheet link is load-bearing, not decoration. In Mode A the
+  editable content stays in the document, so its rules -- drop indicators,
+  hover outlines, drag cursors -- have to reach the document too. Without it
+  everything still LOOKS fine and none of the editing affordances appear.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Content</title>
+<link rel="stylesheet" href="./content-tools-content.css">
+<style>
+    /* The page's only job is to give the shell the viewport. Everything
+       else it draws is inside its own shadow root. */
+    html, body { height: 100%; }
+    body { margin: 0; }
+    content-tools-cms { height: 100%; }
+</style>
+<script type="module" src="./shell.js"></script>
+</head>
+<body>
+<content-tools-cms config="../cms-config.yml"></content-tools-cms>
+</body>
+</html>

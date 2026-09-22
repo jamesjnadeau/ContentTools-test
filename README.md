@@ -18,28 +18,50 @@ Netlify. See [Deploys](#deploys) for why there are two and what it costs.
 | `src/content.config.ts` | Astro's schema for that frontmatter |
 | `src/pages/` | the index and the post route |
 | `public/images/` | media, which the CMS commits alongside the entry that references it |
-| `cms-config.yml` | the runtime config a ContentTools deployment is pointed at |
+| `public/cms-config.yml` | the runtime config the CMS is pointed at, in `public/` so it is actually served |
+| `public/admin/` | the vendored CMS itself — **generated**, refreshed by `scripts/sync-cms.sh` |
 | `netlify.toml` | the Netlify half of the deploy, and the path rewrite it needs |
 
 ## Editing it
 
-1. Build ContentTools and serve `app/` and `dist/` from a static host over
-   **HTTPS** (the GitHub App flow needs a secure context; a personal access
-   token does not, but `sessionStorage` and the redirect both behave better
-   over TLS).
-2. Point the shell's `config` attribute at this repository's `cms-config.yml`.
-3. Sign in with a **fine-grained personal access token** scoped to this
-   repository, with **Contents** and **Pull requests** both set to *read and
-   write*. Anything less is refused at the gate rather than at the first save.
+The CMS is deployed with the site, at **`/admin/`**:
+
+<https://genuine-cocada-82e6e2.netlify.app/admin/>
+
+Sign in with a **fine-grained personal access token** scoped to this
+repository, with **Contents** and **Pull requests** both set to *read and
+write*. Anything less is refused at the gate rather than at the first save.
+The token is held in `sessionStorage` and forgotten when the tab closes; it
+is never sent anywhere but GitHub.
+
+### The vendored CMS
+
+`public/admin/` is **generated** — the built shell, committed. It is not
+installed as a dependency because the package is not on npm yet and its
+`dist/` is gitignored, so there is nothing to depend on. Refresh it from a
+ContentTools checkout:
+
+```sh
+./scripts/sync-cms.sh ../ContentTools
+```
+
+The script deletes the folder before copying, and that is the whole reason it
+exists rather than a line of instructions: the chunk filenames are
+content-hashed, so copying over the top leaves the old chunks behind while
+`shell.js` imports the new names — a page that 404s at runtime on an import
+of a file nobody touched.
+
+When the package reaches npm, this folder and the script are what get
+deleted.
 
 The shell never merges. It opens one branch and one pull request per entry and
 moves it to `ready`; a human merges on GitHub, which is what the review gate is
 for. Merging to `main` deploys to both hosts.
 
-Every pull request also gets a **Netlify preview**, posted as a comment on the
-pull request itself. That is not a convenience: the review step is somebody
-reading a diff, and a diff of markdown does not show what the page will look
-like.
+Every pull request also gets a **Netlify Deploy Preview**, reported as a
+commit status on the pull request. That is not a convenience: the review step
+is somebody reading a diff, and a diff of markdown does not show what the page
+will look like.
 
 ## Deploys
 
